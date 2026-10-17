@@ -1,3 +1,4 @@
+
 /**
  * @file main.cpp
  * @brief Entry point for the Saber Edge Detector application.
@@ -11,15 +12,18 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 
+#include <cmath>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 
 /**
  * @brief Applies Sobel edge detection to an input image.
  *
- * Expects an input image path and optionally an output image path.
+ * Expects an input image path, optionally an output image path,
+ * and optionally a gradient magnitude threshold.
  * Uses a default gradient magnitude threshold of 100.0.
  *
  * @param argc Number of command-line arguments.
@@ -29,16 +33,37 @@
  */
 int main(int argc, char* argv[])
 {
-    if (argc < 2 || argc > 3)
+    if (argc < 2 || argc > 4)
     {
-        std::cerr << "Usage: sobel_detector <input_image> [output_image]\n";
+        std::cerr << "Usage: sobel_detector <input_image> [output_image] [threshold]\n";
         return EXIT_FAILURE;
     }
 
     const std::string input_path = argv[1];
-    const std::string output_path = argc == 3 ? argv[2] : "sobel_output.png";
+    const std::string output_path = argc >= 3 ? argv[2] : "sobel_output.png";
 
-    constexpr double threshold = 100.0;
+    double threshold = 100.0;
+
+    try
+    {
+        if (argc == 4)
+        {
+            const std::string threshold_argument = argv[3];
+            std::size_t parsed_length = 0;
+
+            threshold = std::stod(threshold_argument, &parsed_length);
+
+            if (parsed_length != threshold_argument.length() || !std::isfinite(threshold) || threshold < 0.0)
+            {
+                throw std::invalid_argument("Threshold must be a finite, non-negative number.");
+            }
+        }
+    }
+    catch (const std::exception& exception)
+    {
+        std::cerr << "Invalid threshold: " << exception.what() << '\n';
+        return EXIT_FAILURE;
+    }
 
     // Load the input image as an 8-bit grayscale matrix.
     const cv::Mat input_image = cv::imread(input_path, cv::IMREAD_GRAYSCALE);
