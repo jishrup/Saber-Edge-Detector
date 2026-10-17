@@ -10,19 +10,52 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Locate the OpenCV components required by the application.
 find_package(OpenCV REQUIRED COMPONENTS core imgcodecs)
 
-# Define the executable and its source files.
-add_executable(sobel_detector
-    src/main.cpp
+# Compile the Sobel implementation as a reusable library.
+add_library(sobel_filter
     src/SobelFilter.cpp
 )
 
-# Make project headers and OpenCV headers available to the compiler.
-target_include_directories(sobel_detector PRIVATE
+target_include_directories(sobel_filter PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${OpenCV_INCLUDE_DIRS}
 )
 
-# Link the executable against the required OpenCV libraries.
-target_link_libraries(sobel_detector PRIVATE
+target_link_libraries(sobel_filter PUBLIC
     ${OpenCV_LIBS}
 )
+
+# Build the command-line application.
+add_executable(sobel_detector
+    src/main.cpp
+)
+
+target_link_libraries(sobel_detector PRIVATE
+    sobel_filter
+)
+
+# Enable optional unit testing.
+include(CTest)
+
+if(BUILD_TESTING)
+    include(FetchContent)
+
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.16.0.tar.gz
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+
+    FetchContent_MakeAvailable(googletest)
+
+    add_executable(sobel_tests
+        tests/test_sobel.cpp
+    )
+
+    target_link_libraries(sobel_tests PRIVATE
+        sobel_filter
+        GTest::gtest_main
+    )
+
+    include(GoogleTest)
+    gtest_discover_tests(sobel_tests)
+endif()
