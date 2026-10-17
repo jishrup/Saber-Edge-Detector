@@ -1,3 +1,4 @@
+
 cmake_minimum_required(VERSION 3.16)
 
 project(SaberEdgeDetector LANGUAGES CXX)
@@ -49,12 +50,22 @@ if(BUILD_TESTING)
 
     add_executable(sobel_tests
         tests/test_sobel.cpp
+        tests/test_cli.cpp
     )
 
     target_link_libraries(sobel_tests PRIVATE
         sobel_filter
         GTest::gtest_main
     )
+
+    # Provide absolute paths for CLI integration testing.
+    target_compile_definitions(sobel_tests PRIVATE
+        SOBEL_DETECTOR_PATH="$<TARGET_FILE:sobel_detector>"
+        SOBEL_SAMPLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/samples/test_edge.png"
+    )
+
+    # Build the application before running its integration tests.
+    add_dependencies(sobel_tests sobel_detector)
 
     include(GoogleTest)
     gtest_discover_tests(sobel_tests)
