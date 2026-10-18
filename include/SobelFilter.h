@@ -40,6 +40,24 @@ public:
      */
     static cv::Mat ApplyNaive(const cv::Mat& input_image, double threshold);
 
+    /**
+     * @brief Applies an optimized single-threaded Sobel edge detector.
+     *
+     * Uses direct row-pointer access and expanded Sobel expressions
+     * to reduce per-pixel processing overhead.
+     *
+     * @param input_image Input 8-bit, single-channel grayscale image.
+     * @param threshold Gradient magnitude threshold for edge detection.
+     * @return Binary edge image with the same dimensions as the input.
+     *
+     * @throws std::invalid_argument If the input is empty, has an
+     *         unsupported image type, or the threshold is invalid.
+     *
+     * @note Produces the same output as ApplyNaive().
+     *       Border pixels are always zero.
+     */
+    static cv::Mat ApplyOptimized(const cv::Mat& input_image, double threshold);
+
 private:
     /**
      * @brief Standard 3x3 Sobel kernel for horizontal gradients.
