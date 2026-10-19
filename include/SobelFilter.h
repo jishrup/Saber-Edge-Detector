@@ -58,6 +58,25 @@ public:
      */
     static cv::Mat ApplyOptimized(const cv::Mat& input_image, double threshold);
 
+
+    /**
+     * @brief Applies parallel Sobel edge detection using row-based partitioning.
+     *
+     * @param input_image Input 8-bit, single-channel grayscale image.
+     * @param threshold Gradient magnitude threshold for edge detection.
+     * @param thread_count Number of worker threads. Zero selects automatically.
+     * @return Binary edge image with the same dimensions as the input.
+     *
+     * @throws std::invalid_argument If the input image or threshold is invalid.
+     *
+     * @note Each worker processes a separate range of interior rows.
+     *       Input pixels are shared read-only, and output rows do not overlap.
+     */
+    static cv::Mat ApplyParallel(const cv::Mat& input_image,
+                                 double threshold,
+                                 unsigned int thread_count = 0);
+
+
 private:
     /**
      * @brief Standard 3x3 Sobel kernel for horizontal gradients.
