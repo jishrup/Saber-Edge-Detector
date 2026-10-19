@@ -118,6 +118,31 @@ void BenchmarkOpenCv(benchmark::State& state)
     state.SetItemsProcessed(state.iterations() * input_image.total());
 }
 
+
+/**
+ * @brief Benchmarks parallel Sobel with a configurable worker count.
+ *
+ * @param state Google Benchmark state containing image size and thread count.
+ */
+static void BenchmarkParallel(benchmark::State& state)
+{
+    const int width = static_cast<int>(state.range(0));
+    const int height = static_cast<int>(state.range(1));
+    const unsigned int thread_count = static_cast<unsigned int>(state.range(2));
+
+    const cv::Mat input_image = CreateInputImage(width, height);
+
+    for (auto _ : state)
+    {
+        cv::Mat output_image = saber::SobelFilter::ApplyParallel(input_image, 100.0, thread_count);
+
+        benchmark::DoNotOptimize(output_image.data);
+    }
+
+    state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(width) * height);
+}
+
+
 } // namespace
 
 BENCHMARK(BenchmarkNaive)
@@ -131,6 +156,21 @@ BENCHMARK(BenchmarkOptimized)
     ->Args({1280, 720})
     ->Args({1920, 1080})
     ->Unit(benchmark::kMillisecond);
+
+BENCHMARK(BenchmarkParallel)
+    ->UseRealTime()
+    ->Args({640, 480, 1})
+    ->Args({640, 480, 2})
+    ->Args({640, 480, 4})
+    ->Args({640, 480, 8})
+    ->Args({1280, 720, 1})
+    ->Args({1280, 720, 2})
+    ->Args({1280, 720, 4})
+    ->Args({1280, 720, 8})
+    ->Args({1920, 1080, 1})
+    ->Args({1920, 1080, 2})
+    ->Args({1920, 1080, 4})
+    ->Args({1920, 1080, 8});
 
 BENCHMARK(BenchmarkOpenCv)
     ->Args({640, 480})
