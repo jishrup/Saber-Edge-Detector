@@ -8,7 +8,7 @@ if [[ $# -lt 1 || $# -gt 2 ]]; then
 fi
 
 input_image="$1"
-output_directory="${2:-output}"
+output_directory="${2:-$(dirname "$input_image")}"
 
 if [[ ! -f "$input_image" ]]; then
     echo "Error: Input image does not exist: $input_image"
