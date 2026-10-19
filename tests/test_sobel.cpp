@@ -58,6 +58,24 @@ void ExpectOptimizedMatchesNaive(const cv::Mat& input_image, double threshold)
     }
 }
 
+
+/**
+ * @brief Verifies that parallel Sobel produces the same output as optimized Sobel.
+ *
+ * @param input_image Input grayscale image.
+ * @param threshold Gradient magnitude threshold.
+ * @param thread_count Number of worker threads.
+ */
+void ExpectParallelMatchesOptimized(const cv::Mat& input_image,
+                                    double threshold,
+                                    unsigned int thread_count)
+{
+    const cv::Mat expected_image = saber::SobelFilter::ApplyOptimized(input_image, threshold);
+    const cv::Mat actual_image = saber::SobelFilter::ApplyParallel(input_image, threshold, thread_count);
+
+    ExpectImagesEqual(actual_image, expected_image);
+}
+
 } // namespace
 
 /**
@@ -161,7 +179,6 @@ TEST(SobelFilterTest, RejectsInvalidThreshold)
     EXPECT_THROW(saber::SobelFilter::ApplyNaive(input_image, std::numeric_limits<double>::quiet_NaN()), std::invalid_argument);
     EXPECT_THROW(saber::SobelFilter::ApplyNaive(input_image, std::numeric_limits<double>::infinity()), std::invalid_argument);
 }
-
 
 /**
  * @brief Verifies optimized Sobel detection against known edge patterns.
@@ -316,4 +333,115 @@ TEST(SobelOptimizationTest, RejectsInvalidThreshold)
     EXPECT_THROW(saber::SobelFilter::ApplyOptimized(input_image, -1.0), std::invalid_argument);
     EXPECT_THROW(saber::SobelFilter::ApplyOptimized(input_image, std::numeric_limits<double>::quiet_NaN()), std::invalid_argument);
     EXPECT_THROW(saber::SobelFilter::ApplyOptimized(input_image, std::numeric_limits<double>::infinity()), std::invalid_argument);
+}
+
+
+/**
+ * @brief Verifies parallel Sobel with different worker counts.
+ */
+TEST(SobelParallelTest, MatchesOptimizedForDifferentThreadCounts)
+{
+    cv::Mat input_image(480, 640, CV_8UC1);
+
+    std::mt19937 random_generator(42);
+    std::uniform_int_distribution<int> pixel_distribution(0, 255);
+
+    for (int row = 0; row < input_image.rows; ++row)
+    {
+        for (int col = 0; col < input_image.cols; ++col)
+        {
+            input_image.at<unsigned char>(row, col) = static_cast<unsigned char>(pixel_distribution(random_generator));
+        }
+    }
+
+    for (unsigned int thread_count : {0u, 1u, 2u, 3u, 4u, 8u})
+    {
+        SCOPED_TRACE("Thread count: " + std::to_string(thread_count));
+        ExpectParallelMatchesOptimized(input_image, 100.0, thread_count);
+    }
+}
+
+/**
+ * @brief Verifies parallel Sobel across different image resolutions.
+ */
+TEST(SobelParallelTest, MatchesOptimizedForDifferentImageSizes)
+{
+    const std::vector<cv::Size> image_sizes = {{3, 3},
+                                               {17, 13},
+                                               {128, 96},
+                                               {1920, 1080}};
+
+    for (const cv::Size& image_size : image_sizes)
+    {
+        cv::Mat input_image(image_size, CV_8UC1);
+
+        for (int row = 0; row < input_image.rows; ++row)
+        {
+            for (int col = 0; col < input_image.cols; ++col)
+            {
+                input_image.at<unsigned char>(row, col) = static_cast<unsigned char>((row * 17 + col * 31) % 256);
+            }
+        }
+
+        ExpectParallelMatchesOptimized(input_image, 100.0, 4);
+    }
+}
+
+/**
+ * @brief Verifies parallel Sobel on non-contiguous image regions.
+ */
+TEST(SobelParallelTest, MatchesOptimizedForNonContiguousImages)
+{
+    cv::Mat parent_image(40, 60, CV_8UC1);
+
+    for (int row = 0; row < parent_image.rows; ++row)
+    {
+        for (int col = 0; col < parent_image.cols; ++col)
+        {
+            parent_image.at<unsigned char>(row, col) = static_cast<unsigned char>((row * 13 + col * 19) % 256);
+        }
+    }
+
+    const cv::Mat input_image = parent_image(cv::Rect(5, 7, 30, 20));
+
+    ASSERT_FALSE(input_image.isContinuous());
+
+    ExpectParallelMatchesOptimized(input_image, 100.0, 4);
+}
+
+/**
+ * @brief Verifies parallel Sobel handles images smaller than 3x3.
+ */
+TEST(SobelParallelTest, SmallImagesProduceNoEdges)
+{
+    const cv::Mat input_image(2, 5, CV_8UC1, cv::Scalar(255));
+
+    ExpectParallelMatchesOptimized(input_image, 100.0, 4);
+}
+
+/**
+ * @brief Verifies parallel Sobel rejects unsupported image types.
+ */
+TEST(SobelParallelTest, RejectsInvalidImageType)
+{
+    const cv::Mat input_image(5, 5, CV_8UC3, cv::Scalar(0, 0, 0));
+
+    EXPECT_THROW(saber::SobelFilter::ApplyParallel(input_image, 100.0, 4), std::invalid_argument);
+}
+
+/**
+ * @brief Verifies parallel Sobel rejects invalid arguments.
+ */
+TEST(SobelParallelTest, RejectsInvalidArguments)
+{
+    const cv::Mat empty_image;
+    const cv::Mat input_image(5, 5, CV_8UC1, cv::Scalar(128));
+
+    EXPECT_THROW(saber::SobelFilter::ApplyParallel(empty_image, 100.0, 4), std::invalid_argument);
+
+    EXPECT_THROW(saber::SobelFilter::ApplyParallel(input_image, -1.0, 4), std::invalid_argument);
+
+    EXPECT_THROW(saber::SobelFilter::ApplyParallel(input_image, std::numeric_limits<double>::quiet_NaN(), 4), std::invalid_argument);
+
+    EXPECT_THROW(saber::SobelFilter::ApplyParallel(input_image, std::numeric_limits<double>::infinity(), 4), std::invalid_argument);
 }
