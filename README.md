@@ -64,13 +64,13 @@ The multithreaded implementation divides image rows between worker threads. Each
 
 Mean wall-clock times measured on Apple Silicon using Google Benchmark:
 
-| Resolution | Naive | Optimized | Parallel (4 threads) | OpenCV |
-|---|---:|---:|---:|---:|
-| 640x480 | 0.800 ms | 0.508 ms | 0.209 ms | 0.453 ms |
-| 1280x720 | 2.470 ms | 1.580 ms | 0.523 ms | 1.300 ms |
-| 1920x1080 | 5.390 ms | 3.430 ms | 1.090 ms | 2.610 ms |
+| Resolution |    Naive | Optimized | Parallel (2T) | Parallel (4T) | Parallel (8T) |   OpenCV |
+|------------|---------:|----------:|--------------:|--------------:|--------------:|---------:|
+| 640x480    | 0.800 ms |  0.508 ms |      0.324 ms |      0.209 ms |      0.236 ms | 0.453 ms |
+| 1280x720   | 2.470 ms |  1.580 ms |      0.941 ms |      0.523 ms |      0.508 ms | 1.300 ms |
+| 1920x1080  | 5.390 ms |  3.430 ms |      1.963 ms |      1.090 ms |      1.035 ms | 2.610 ms |
 
-At 1920x1080, the four-thread implementation was approximately 3.15x faster than the optimized single-threaded version.
+At 1920x1080, the four-thread implementation achieved approximately a 3.15x speedup over the optimized single-threaded version. Eight threads provided only a small additional improvement at higher resolutions, while four threads performed better at 640x480. Automatic thread selection is capped at four workers as a practical balance between performance and threading overhead.
 
 Results may vary depending on hardware and system load.
 
